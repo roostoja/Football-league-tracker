@@ -17,19 +17,29 @@ A simple static website showing recent results, top scorers and match details fo
 
 ## Running
 
-There's no build step. Open `index.html` in a browser, or serve the folder:
+Requires [Node.js](https://nodejs.org) 18 or newer. There are no dependencies and no build step.
 
-```bash
-python3 -m http.server 8000
-```
+1. Get a free API key from [football-data.org](https://www.football-data.org/client/register).
+2. Create a file called `.env` in the project folder. It's git-ignored, so the key never gets committed:
 
-Then visit http://localhost:8000.
+   ```
+   FOOTBALL_DATA_API_KEY=your-key-here
+   ```
+
+3. Start the server and open http://localhost:8000:
+
+   ```bash
+   node server.js
+   ```
+
+The server serves the site and forwards `/api/*` requests to football-data.org, adding your key. It's needed because football-data.org blocks requests made directly from a browser (CORS), so a plain static page can't call the API.
+
+You can also skip `.env` and paste the key into the site's **Settings** dialog. It's then stored in your browser only.
 
 ## Data sources
 
-By default the site shows **generated demo data**. The results are fictional but stay consistent, so it works offline straight away.
-
-For real data, get a free API key from [football-data.org](https://www.football-data.org/client/register), then open **Settings** on the site, choose *Live data* and paste the key. The key is stored only in your browser's `localStorage`.
+- **Live data** (football-data.org): used automatically when the server has a key.
+- **Demo data**: generated, fictional results. Used when there's no key, or when you open `index.html` directly without the server. You can also switch to it in **Settings**.
 
 Free-tier notes:
 - All four competitions are included.
@@ -44,4 +54,5 @@ css/styles.css      styles (light/dark)
 js/demo-data.js     deterministic demo data generator
 js/live-data.js     football-data.org v4 client
 js/app.js           router and views (dashboard, league, match)
+server.js           static server + football-data.org proxy
 ```

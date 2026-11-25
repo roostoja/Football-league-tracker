@@ -13,8 +13,13 @@
     } catch (e) { return null; }
     return null;
   }
+  // Live data is used when chosen in Settings, or by default when server.js has a key.
+  function wantsLive() {
+    const pref = store('dataSource');
+    return pref === 'live' || (pref == null && window.LiveSource.status.serverKey);
+  }
   function source() {
-    return store('dataSource') === 'live' && window.LiveSource.hasKey() ? window.LiveSource : window.DemoSource;
+    return wantsLive() && window.LiveSource.available() ? window.LiveSource : window.DemoSource;
   }
 
   // ---------- helpers ----------
@@ -27,11 +32,13 @@
   const fmtDayKey = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
 
   function crest(team, size) {
-    if (team.crest) return `<img class="crest" src="${esc(team.crest)}" alt="" width="${size}" height="${size}" loading="lazy">`;
     const label = (team.tla || team.name || '?').slice(0, 3);
     let h = 0;
     for (const c of team.name || '') h = (h * 31 + c.charCodeAt(0)) % 360;
-    return `<span class="crest crest-fallback" style="--h:${h};width:${size}px;height:${size}px">${esc(label)}</span>`;
+    const fallback = (hidden) => `<span class="crest crest-fallback" style="--h:${h};width:${size}px;height:${size}px"${hidden ? ' hidden' : ''}>${esc(label)}</span>`;
+    if (!team.crest) return fallback(false);
+    // If the crest image fails to load, swap in the initials badge.
+    return `<img class="crest" src="${esc(team.crest)}" alt="" width="${size}" height="${size}" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false">${fallback(true)}`;
   }
 
   function recapUrl(m) {
@@ -180,6 +187,10 @@
       ...m.goals.map((g) => ({ ...g, kind: 'goal' })),
       ...m.cards.map((c) => ({ ...c, kind: 'card' }))
     ].sort((x, y) => x.minute - y.minute || (x.extra || 0) - (y.extra || 0));
+    if (m.hasEvents === false) {
+      return `<p class="muted empty">Goal scorers and cards aren't included in the free football-data.org plan.${
+        m.halfTime && m.halfTime.home != null ? ` Half-time score was ${m.halfTime.home}–${m.halfTime.away}.` : ''}</p>`;
+    }
     if (!events.length) return '<p class="muted empty">No goals or cards recorded.</p>';
     let htShown = false;
     const out = [];
@@ -294,10 +305,19 @@
     badge.textContent = live ? 'Live data' : 'Demo data';
     badge.classList.toggle('live', live);
     document.getElementById('demo-banner').hidden = live;
+    const reason = document.getElementById('banner-reason');
+    if (wantsLive() && !window.LiveSource.status.proxy) {
+      reason.innerHTML = 'Live data needs the bundled server, because football-data.org blocks direct browser requests. Run <code>node server.js</code> and open <a href="http://localhost:8000">http://localhost:8000</a>.';
+    } else if (wantsLive()) {
+      reason.textContent = 'Add your football-data.org API key in Settings to see real results.';
+    } else {
+      reason.innerHTML = 'Open <em>Settings</em> and choose live data to see real results.';
+    }
   }
 
   document.getElementById('open-settings').addEventListener('click', () => {
-    form.source.value = store('dataSource') === 'live' ? 'live' : 'demo';
+    form.source.value = wantsLive() ? 'live' : 'demo';
+    document.getElementById('server-key-note').hidden = !window.LiveSource.status.serverKey;
     form.apiKey.value = store('fdApiKey') || '';
     dialog.showModal();
   });
@@ -305,7 +325,7 @@
     if (e.submitter && e.submitter.value === 'cancel') return;
     const key = form.apiKey.value.trim();
     store('fdApiKey', key || null);
-    store('dataSource', form.source.value === 'live' && key ? 'live' : 'demo');
+    store('dataSource', form.source.value);
     updateSourceBadge();
     route();
   });
@@ -324,6 +344,8 @@
     LEAGUES.map((l) => `<a href="#/league/${l.code}" data-code="${l.code}" style="--league:${l.color}"><span class="league-dot"></span>${esc(l.name)}</a>`).join('');
 
   window.addEventListener('hashchange', route);
-  updateSourceBadge();
-  route();
+  window.LiveSource.init().then(() => {
+    updateSourceBadge();
+    route();
+  });
 })();

@@ -21,8 +21,8 @@
   </header>
 
   <div id="demo-banner" class="wrap" hidden><div class="banner">
-    Showing <strong>generated demo data</strong> — results and statistics are fictional.
-    Open <em>Settings</em> and add a free football-data.org API key to see real results.
+    Showing <strong>generated demo data</strong>: results and statistics are fictional.
+    <span id="banner-reason"></span>
   </div></div>
 
   <main id="app" class="wrap"></main>
@@ -38,12 +38,13 @@
       <label class="radio"><input type="radio" name="source" value="demo"> Demo data (works offline, fictional)</label>
       <label class="radio"><input type="radio" name="source" value="live"> Live data from football-data.org</label>
       <label class="field">
-        <span>API key</span>
+        <span>API key <span id="server-key-note" class="muted small" hidden>(optional: the server already has one)</span></span>
         <input name="apiKey" type="password" autocomplete="off" placeholder="Paste your football-data.org key">
       </label>
       <p class="muted small">Register for a free key at
         <a href="https://www.football-data.org/client/register" target="_blank" rel="noopener">football-data.org</a>.
-        The key is stored only in this browser. The free tier covers all four leagues but not detailed match statistics.</p>
+        The key is stored only in this browser. Live data needs the bundled server (<code>node server.js</code>).
+        The free tier covers all four leagues but not goal scorers, cards or match statistics.</p>
       <div class="dialog-actions">
         <button class="btn ghost" value="cancel" formnovalidate>Cancel</button>
         <button class="btn" value="save">Save</button>

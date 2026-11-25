@@ -1,5 +1,6 @@
 /*
- * Live data source: football-data.org API v4.
+ * Live data source: football-data.org API v4, called through the local proxy
+ * in server.js (the API's CORS policy blocks direct browser calls).
  * Free tier covers Premier League (PL), La Liga (PD), Serie A (SA) and
  * the Champions League (CL) — get a key at https://www.football-data.org/client/register
  * Free tier limit is 10 requests/minute, so responses are cached for 5 minutes.
@@ -9,7 +10,8 @@
 (function () {
   'use strict';
 
-  const BASE = 'https://api.football-data.org/v4';
+  const BASE = 'api/v4';
+  const status = { proxy: false, serverKey: false };
   const TTL_MS = 5 * 60 * 1000;
 
   function getKey() {
@@ -23,7 +25,8 @@
       if (hit && Date.now() - hit.t < TTL_MS) return hit.d;
     } catch (e) { /* storage unavailable */ }
 
-    const res = await fetch(BASE + path, { headers: { 'X-Auth-Token': getKey() } });
+    const key = getKey();
+    const res = await fetch(BASE + path, { headers: key ? { 'X-Auth-Token': key } : {} });
     if (res.status === 429) throw new Error('API rate limit reached (10 requests/minute on the free tier). Wait a minute and reload.');
     if (res.status === 403 || res.status === 400) {
       let msg = '';
@@ -53,7 +56,8 @@
       away: team(m.awayTeam),
       score: { home: m.score.fullTime.home, away: m.score.fullTime.away },
       halfTime: m.score.halfTime ? { home: m.score.halfTime.home, away: m.score.halfTime.away } : null,
-      goals: [], cards: [], stats: []
+      goals: [], cards: [], stats: [],
+      hasEvents: true
     };
   }
 
@@ -73,7 +77,17 @@
 
   window.LiveSource = {
     name: 'live',
-    hasKey: () => !!getKey(),
+    status,
+    // Detects whether the page is served by server.js (and whether it holds a key).
+    async init() {
+      if (!/^https?:$/.test(location.protocol)) return status;
+      try {
+        const res = await fetch('api/status', { cache: 'no-store' });
+        if (res.ok) Object.assign(status, await res.json());
+      } catch (e) { /* static hosting without the proxy */ }
+      return status;
+    },
+    available: () => status.proxy && (status.serverKey || !!getKey()),
     async getRecentMatches(code, limit = 10) {
       const now = new Date();
       const from = new Date(now.getTime() - 40 * 86400000);
@@ -84,8 +98,9 @@
         .slice(0, limit);
     },
     async getScorers(code, limit = 10) {
-      const data = await api(`/competitions/${code}/scorers?limit=${limit}`);
-      return (data.scorers || []).map((s) => ({
+      // Always fetch the same list (top 15) so the dashboard and league page share one cached request.
+      const data = await api(`/competitions/${code}/scorers?limit=15`);
+      return (data.scorers || []).slice(0, limit).map((s) => ({
         player: s.player.name,
         team: s.team.shortName || s.team.name,
         tla: s.team.tla,
@@ -101,6 +116,8 @@
       const match = mapMatch(m, code);
       const sideOf = (t) => (t && t.id === m.homeTeam.id ? 'home' : 'away');
 
+      // The free tier omits goals/bookings entirely (not just empty arrays).
+      match.hasEvents = Array.isArray(m.goals);
       match.goals = (m.goals || []).map((g) => ({
         minute: g.minute, extra: g.injuryTime || 0, side: sideOf(g.team),
         scorer: g.scorer && g.scorer.name, assist: g.assist && g.assist.name,
