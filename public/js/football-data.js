@@ -1,5 +1,5 @@
 /*
- * Live data source: football-data.org API v4, called through the local proxy
+ * football-data.org API v4 client (top scorers, and fallback results), called through the proxy
  * in server.js (the API's CORS policy blocks direct browser calls).
  * Free tier covers Premier League (PL), La Liga (PD), Serie A (SA) and
  * the Champions League (CL) — get a key at https://www.football-data.org/client/register
@@ -51,7 +51,7 @@
   }
 
   const ymd = (d) => d.toISOString().slice(0, 10);
-  const team = (t) => ({ id: t.id, name: t.shortName || t.name, tla: t.tla, crest: t.crest || null });
+  const team = (t) => ({ id: t.id, name: t.shortName || t.name, fullName: t.name, tla: t.tla, crest: t.crest || null });
 
   function mapMatch(m, code) {
     return {
@@ -86,7 +86,7 @@
     ['red_cards', 'Red cards']
   ];
 
-  window.LiveSource = {
+  window.FootballDataSource = {
     name: 'live',
     async getRecentMatches(code, limit = 10) {
       const now = new Date();

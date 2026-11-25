@@ -18,7 +18,7 @@
     } catch (e) { return null; }
     return null;
   }
-  const source = () => window.LiveSource;
+  const source = () => window.DataSource;
 
   // ---------- helpers ----------
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -39,10 +39,26 @@
     return `<img class="crest" src="${esc(team.crest)}" alt="" width="${size}" height="${size}" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false">${fallback(true)}`;
   }
 
-  function recapUrl(m) {
+  function youtubeUrl(m) {
     const d = new Date(m.utcDate);
-    const q = `${m.home.name} vs ${m.away.name} highlights ${fmtLongDate.format(d).replace(/^\w+, /, '')}`;
+    const q = `${m.home.fullName || m.home.name} vs ${m.away.fullName || m.away.name} highlights ${fmtLongDate.format(d).replace(/^\w+, /, '')}`;
     return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
+  }
+
+  const minuteLabel = (e) => `${e.minute}${e.extra ? '+' + e.extra : ''}'`;
+
+  // Scorers listed under each team on the scoreboard.
+  function goalSummary(m, side) {
+    const goals = (m.goals || []).filter((g) => g.side === side);
+    if (!goals.length) return '';
+    const byPlayer = new Map();
+    goals.forEach((g) => {
+      const key = (g.scorer || 'Goal') + (g.type === 'OWN' ? ' (o.g.)' : '');
+      const label = minuteLabel(g) + (g.type === 'PENALTY' ? ' pen.' : '');
+      byPlayer.set(key, [...(byPlayer.get(key) || []), label]);
+    });
+    return `<ul class="sb-scorers">${[...byPlayer].map(([p, mins]) =>
+      `<li><span aria-hidden="true">⚽</span> ${esc(p)} <span class="muted">${esc(mins.join(', '))}</span></li>`).join('')}</ul>`;
   }
 
   function matchRow(m, hideDate) {
@@ -170,7 +186,7 @@
     const hp = total ? (h / total) * 100 : 50;
     const u = s.unit || '';
     // For fouls/cards/offsides, fewer is "better" — don't highlight a leader.
-    const neutral = ['fouls', 'offsides', 'yellow', 'red', 'yellow_cards', 'red_cards'].includes(s.key);
+    const neutral = ['fouls', 'foulsCommitted', 'offsides', 'yellowCards', 'redCards', 'yellow_cards', 'red_cards'].includes(s.key);
     const lead = neutral || h === a ? '' : h > a ? 'home' : 'away';
     return `
       <div class="stat">
@@ -182,21 +198,24 @@
   function timeline(m) {
     const events = [
       ...m.goals.map((g) => ({ ...g, kind: 'goal' })),
-      ...m.cards.map((c) => ({ ...c, kind: 'card' }))
-    ].sort((x, y) => x.minute - y.minute || (x.extra || 0) - (y.extra || 0));
+      ...m.cards.map((c) => ({ ...c, kind: 'card' })),
+      ...(m.subs || []).map((x) => ({ ...x, kind: 'sub' })),
+      ...(m.misses || []).map((x) => ({ ...x, kind: 'miss' }))
+    ].sort((x, y) => (x.period || 0) - (y.period || 0) || x.minute - y.minute || (x.extra || 0) - (y.extra || 0));
+    const secondHalf = (e) => (e.period ? e.period > 1 : e.minute > 45);
     if (m.hasEvents === false) {
-      return `<p class="muted empty">Goal scorers and cards aren't included in the free football-data.org plan.${
+      return `<p class="muted empty">Goal details couldn't be loaded for this match (the backup data source only has the score).${
         m.halfTime && m.halfTime.home != null ? ` Half-time score was ${m.halfTime.home}–${m.halfTime.away}.` : ''}</p>`;
     }
     if (!events.length) return '<p class="muted empty">No goals or cards recorded.</p>';
     let htShown = false;
     const out = [];
     events.forEach((e) => {
-      if (!htShown && e.minute > 45) {
+      if (!htShown && secondHalf(e)) {
         htShown = true;
         if (m.halfTime && m.halfTime.home != null) out.push(`<li class="tl-break">Half-time ${m.halfTime.home}–${m.halfTime.away}</li>`);
       }
-      const min = `${e.minute}'${e.extra ? '+' + e.extra : ''}`;
+      const min = minuteLabel(e);
       let icon, main, sub = '';
       if (e.kind === 'goal') {
         icon = '<span class="ev ev-goal" title="Goal">⚽</span>';
@@ -204,15 +223,23 @@
         const tags = [];
         if (e.type === 'PENALTY') tags.push('pen.');
         if (e.type === 'OWN') tags.push('o.g.');
+        if (e.header) tags.push('header');
         if (tags.length) main += ` <span class="muted">(${tags.join(', ')})</span>`;
         if (e.score) main += ` <span class="ev-score">${e.score[0]}–${e.score[1]}</span>`;
         if (e.assist) sub = `Assist: ${esc(e.assist)}`;
+      } else if (e.kind === 'sub') {
+        icon = '<span class="ev ev-sub" title="Substitution">⇄</span>';
+        main = `<span class="sub-in">${esc(e.playerIn || '')}</span>`;
+        if (e.playerOut) sub = `Off: ${esc(e.playerOut)}`;
+      } else if (e.kind === 'miss') {
+        icon = '<span class="ev ev-miss" title="Penalty missed">✕</span>';
+        main = `${esc(e.player || 'Penalty')} <span class="muted">(penalty missed)</span>`;
       } else {
         icon = `<span class="ev ev-card ${e.card === 'RED' ? 'red' : 'yellow'}" title="${e.card === 'RED' ? 'Red' : 'Yellow'} card"></span>`;
         main = esc(e.player || (e.card === 'RED' ? 'Red card' : 'Yellow card'));
       }
       out.push(`
-        <li class="tl-item ${e.side}">
+        <li class="tl-item ${e.side}${e.kind === 'sub' ? ' tl-minor' : ''}">
           <span class="tl-min">${min}</span>
           <span class="tl-body">${icon}<span><span class="tl-main">${main}</span>${sub ? `<span class="tl-sub muted">${sub}</span>` : ''}</span></span>
         </li>`);
@@ -240,7 +267,9 @@
     const meta = [
       `${fmtLongDate.format(d)}, ${fmtTime.format(d)}`,
       m.matchday ? `Matchday ${m.matchday}` : null,
-      m.venue, m.referee ? `Referee: ${m.referee}` : null
+      m.venue,
+      m.attendance ? `Attendance: ${m.attendance.toLocaleString('en-GB')}` : null,
+      m.referee ? `Referee: ${m.referee}` : null
     ].filter(Boolean);
 
     app.innerHTML = `
@@ -248,18 +277,19 @@
       <section class="card scoreboard" style="--league:${l.color}">
         <div class="sb-league"><span class="league-dot"></span>${esc(l.name)}</div>
         <div class="sb-main">
-          <div class="sb-team">${crest(m.home, 64)}<span>${esc(m.home.name)}</span></div>
+          <div class="sb-team">${crest(m.home, 64)}<span>${esc(m.home.name)}</span>${goalSummary(m, 'home')}</div>
           <div class="sb-score">
             <div class="sb-goals">${m.score.home ?? '–'}<span class="sep">–</span>${m.score.away ?? '–'}</div>
             <div class="sb-status">Full-time${m.halfTime && m.halfTime.home != null ? ` · HT ${m.halfTime.home}–${m.halfTime.away}` : ''}</div>
           </div>
-          <div class="sb-team">${crest(m.away, 64)}<span>${esc(m.away.name)}</span></div>
+          <div class="sb-team">${crest(m.away, 64)}<span>${esc(m.away.name)}</span>${goalSummary(m, 'away')}</div>
         </div>
         <ul class="sb-meta">${meta.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-        <a class="btn recap" href="${recapUrl(m)}" target="_blank" rel="noopener noreferrer">
+        <a class="btn recap" href="${esc(m.recap ? m.recap.url : youtubeUrl(m))}" target="_blank" rel="noopener noreferrer"${m.recap ? ` title="${esc(m.recap.title)}"` : ''}>
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
           Watch recap video
         </a>
+        ${m.recap ? `<div class="recap-alt small"><a href="${esc(youtubeUrl(m))}" target="_blank" rel="noopener noreferrer">Or find highlights on YouTube</a></div>` : ''}
       </section>
       <div class="match-layout">
         <section class="card">
@@ -267,7 +297,7 @@
           ${m.stats.length ? `
             <div class="stats-head"><span>${esc(m.home.tla || m.home.name)}</span><span>${esc(m.away.tla || m.away.name)}</span></div>
             <div class="stats">${m.stats.map(statRow).join('')}</div>`
-            : '<p class="muted empty">Detailed statistics are not available for this match with the current data plan.</p>'}
+            : '<p class="muted empty">Detailed statistics are not available for this match.</p>'}
         </section>
         <section class="card">
           <header class="card-head"><h2>Timeline</h2></header>

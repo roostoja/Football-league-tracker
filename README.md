@@ -11,7 +11,7 @@ A simple static website showing recent results, top scorers and match details fo
 
 - **Dashboard**: the latest games and top 5 scorers for every league
 - **League pages**: recent games grouped by date and the top 15 scorers
-- **Match pages**: the score, venue and referee, team statistics (possession, xG, shots, corners, passes, cards…), a goal and card timeline, and a **Watch recap video** button that opens a YouTube highlights search for that game
+- **Match pages**: the score and half-time score, goal scorers under each team, venue and attendance, team statistics (possession, shots, corners, passes, tackles, cards…), a full timeline of goals with assists, cards, substitutions and missed penalties, and a **Watch recap video** button
 - All kick-off times are shown in Estonian time (`Europe/Tallinn`, 24-hour clock)
 - Works on phones, and has a dark mode
 
@@ -40,14 +40,19 @@ Connect the repository with the host's default settings; no build command is nee
 
 **API key:** the default key is stored in `lib/football-proxy.mjs` (and `.env` for the local server). To change it, edit those files or set the `FOOTBALL_DATA_API_KEY` environment variable on the host. You can also paste a key into the site's **Settings** dialog; it's then stored in that browser only.
 
-## Data source
+## Data sources
 
-All data comes from [football-data.org](https://www.football-data.org) through the `/api` proxy. Opening `public/index.html` directly as a file doesn't work; use `node server.js` or a supported host.
+| Data | Source | Notes |
+| --- | --- | --- |
+| Results, goal scorers and assists, cards, substitutions, match statistics, venue | [ESPN](https://www.espn.com/soccer/) public API (`site.api.espn.com`) | Free and needs no key. It's unofficial and undocumented, so it could change without notice. |
+| Top scorers | [football-data.org](https://www.football-data.org) | Free key included. |
+| Backup results (if ESPN is down) | football-data.org | Score only, no goal details. |
+| Recap video | ESPN highlights if they can be played in Estonia, otherwise a YouTube search | ESPN's highlight clips are mostly limited to the UK and Ireland. |
 
-Free-tier notes:
-- All four competitions are included.
+Both APIs are called through the site's `/api` proxy (`lib/football-proxy.mjs`), which caches responses for 5 minutes. Opening `public/index.html` directly as a file doesn't work; use `node server.js` or a supported host.
+
+football-data.org free-tier notes:
 - The limit is 10 requests a minute, so responses are cached for 5 minutes.
-- Detailed match statistics (possession, shots…) come only with paid plans. With a free key the match page shows the score, goals and cards.
 
 ## Structure
 
@@ -55,7 +60,9 @@ Free-tier notes:
 public/                    the website (the only folder that gets published)
   index.html               page shell, navigation, settings dialog
   css/styles.css           styles (light/dark)
-  js/live-data.js          football-data.org client (calls /api)
+  js/espn-data.js          ESPN client: results and match details
+  js/football-data.js      football-data.org client: top scorers, backup results
+  js/data.js               combines the two sources
   js/app.js                router and views (dashboard, league, match)
 lib/football-proxy.mjs     shared /api proxy with 5-minute caching
 server.js                  local Node server
