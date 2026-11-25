@@ -11,7 +11,7 @@ export default {
     }
     // Edge cache so repeated visits don't use up the API's rate limit (10 requests/minute).
     const cache = caches.default;
-    const cacheable = request.method === 'GET' && !request.headers.get('x-auth-token') && url.pathname !== '/api/status';
+    const cacheable = request.method === 'GET';
     if (cacheable) {
       const hit = await cache.match(request);
       if (hit) return hit;

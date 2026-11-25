@@ -62,11 +62,13 @@
   function mapScoreboardEvent(e, code) {
     const c = e.competitions[0];
     const { home, away } = sides(c.competitors);
+    const st = (c.status && c.status.type) || {};
     return {
       id: String(e.id),
       league: code,
       utcDate: e.date,
-      status: 'FINISHED',
+      status: st.state === 'post' ? 'FINISHED' : st.state === 'in' ? 'LIVE' : 'SCHEDULED',
+      venue: c.venue && c.venue.fullName ? c.venue.fullName : null,
       home: team(home),
       away: team(away),
       score: { home: num(home.score), away: num(away.score) }
@@ -131,6 +133,27 @@
       const seen = new Set();
       matches = matches.filter((m) => !seen.has(m.id) && seen.add(m.id));
       return matches.sort((a, b) => b.utcDate.localeCompare(a.utcDate)).slice(0, limit);
+    },
+
+    // Matches from now until `days` ahead (includes games currently being played).
+    async getUpcomingMatches(code, days = 7) {
+      const now = new Date();
+      const end = new Date(now.getTime() + days * 86400000);
+      const months = [...new Set([ymd(now), ymd(end)])];
+      const data = await Promise.all(months.map((m) => get(`${BASE}/${slug(code)}/scoreboard?dates=${m}`)));
+      const seen = new Set();
+      const out = [];
+      data.forEach((d) => (d.events || []).forEach((e) => {
+        const st = e.competitions && e.competitions[0] && e.competitions[0].status && e.competitions[0].status.type;
+        const t = new Date(e.date);
+        if (!st || seen.has(e.id)) return;
+        const live = st.state === 'in';
+        if (live || (st.state === 'pre' && t >= now && t <= end)) {
+          seen.add(e.id);
+          out.push(mapScoreboardEvent(e, code));
+        }
+      }));
+      return out.sort((a, b) => a.utcDate.localeCompare(b.utcDate));
     },
 
     async getMatch(code, id) {

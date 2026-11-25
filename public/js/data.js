@@ -21,6 +21,14 @@
       const matches = await fd.getRecentMatches(code, limit);
       return matches.map((m) => ({ ...m, id: 'fd' + m.id }));
     },
+    async getUpcomingMatches(code, days = 7) {
+      try {
+        return await espn.getUpcomingMatches(code, days);
+      } catch (e) {
+        console.warn('ESPN unavailable, using football-data.org:', e);
+      }
+      return fd.getUpcomingMatches(code, days);
+    },
     getScorers(code, limit) {
       return fd.getScorers(code, limit);
     },

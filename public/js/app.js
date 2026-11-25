@@ -10,14 +10,6 @@
   ];
   const app = document.getElementById('app');
 
-  // ---------- data source selection ----------
-  function store(key, val) {
-    try {
-      if (val === undefined) return localStorage.getItem(key);
-      if (val === null) localStorage.removeItem(key); else localStorage.setItem(key, val);
-    } catch (e) { return null; }
-    return null;
-  }
   const source = () => window.DataSource;
 
   // ---------- helpers ----------
@@ -139,6 +131,77 @@
       card.querySelector('.slot-scorers').innerHTML = scorers.status === 'fulfilled'
         ? scorersTable(scorers.value, true) : errorBox(scorers.reason);
     }
+  }
+
+  // ---------- coming matches ----------
+  const UPCOMING_DAYS = 7;
+
+  function upcomingRow(m) {
+    const l = league(m.league);
+    const d = new Date(m.utcDate);
+    const live = m.status === 'LIVE';
+    return `
+      <div class="match-row upcoming" data-league="${esc(m.league)}">
+        <span class="match-when">${live ? '<span class="live-tag">Live</span>' : `<span>${fmtTime.format(d)}</span>`}</span>
+        <span class="team home"><span class="team-name">${esc(m.home.name)}</span>${crest(m.home, 22)}</span>
+        <span class="score vs">${live && m.score.home != null ? `${m.score.home}<span class="sep">:</span>${m.score.away}` : 'vs'}</span>
+        <span class="team away">${crest(m.away, 22)}<span class="team-name">${esc(m.away.name)}</span></span>
+        <span class="comp-tag" style="--league:${l.color}" title="${esc(l.name)}"><span class="league-dot"></span><span class="comp-name">${esc(l.name)}</span></span>
+      </div>`;
+  }
+
+  async function renderUpcoming(token) {
+    setActiveNav('upcoming');
+    document.title = 'Coming matches · Football Tracker';
+    app.innerHTML = `
+      <section class="page-head">
+        <h1>Coming matches</h1>
+        <p class="muted">Fixtures for the next ${UPCOMING_DAYS} days. Times shown in Estonian time (${esc(TZ)}).</p>
+      </section>
+      <div class="chips" role="group" aria-label="Filter by league">
+        <button type="button" class="chip active" data-filter="all">All leagues</button>
+        ${LEAGUES.map((l) => `<button type="button" class="chip" data-filter="${l.code}" style="--league:${l.color}"><span class="league-dot"></span>${esc(l.name)}</button>`).join('')}
+      </div>
+      <section class="card" id="upcoming">${loading}</section>`;
+
+    const results = await Promise.allSettled(LEAGUES.map((l) => source().getUpcomingMatches(l.code, UPCOMING_DAYS)));
+    if (token !== routeToken) return;
+    const box = document.getElementById('upcoming');
+    const failed = results.map((r, i) => (r.status === 'rejected' ? LEAGUES[i].name : null)).filter(Boolean);
+    const matches = results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
+      .sort((a, b) => a.utcDate.localeCompare(b.utcDate));
+
+    const groups = new Map();
+    matches.forEach((m) => {
+      const k = fmtDayKey.format(new Date(m.utcDate));
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(m);
+    });
+    box.innerHTML =
+      (failed.length ? errorBox(new Error('Fixtures could not be loaded for: ' + failed.join(', '))) : '') +
+      (matches.length ? [...groups.values()].map((ms) => `
+        <div class="day-group">
+          <h3 class="day-label">${fmtLongDate.format(new Date(ms[0].utcDate))}</h3>
+          ${ms.map(upcomingRow).join('')}
+        </div>`).join('') : '') +
+      `<p class="muted empty" id="upcoming-empty"${matches.length ? ' hidden' : ''}>No matches in the next ${UPCOMING_DAYS} days.</p>`;
+
+    // League filter (client-side).
+    document.querySelectorAll('.chip').forEach((chip) => chip.addEventListener('click', () => {
+      const f = chip.dataset.filter;
+      document.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c === chip));
+      box.querySelectorAll('.day-group').forEach((g) => {
+        let shown = 0;
+        g.querySelectorAll('.match-row').forEach((r) => {
+          const on = f === 'all' || r.dataset.league === f;
+          r.hidden = !on;
+          if (on) shown++;
+        });
+        g.hidden = shown === 0;
+      });
+      const any = box.querySelector('.day-group:not([hidden])');
+      document.getElementById('upcoming-empty').hidden = !!any;
+    }));
   }
 
   async function renderLeague(code, token) {
@@ -317,33 +380,20 @@
     const parts = (location.hash.replace(/^#\/?/, '') || '').split('/').map(decodeURIComponent);
     window.scrollTo(0, 0);
     if (!parts[0]) return renderDashboard(token);
+    if (parts[0] === 'upcoming') return renderUpcoming(token);
     if (parts[0] === 'league' && parts[1]) return renderLeague(parts[1], token);
     if (parts[0] === 'match' && parts[1] && parts[2]) return renderMatch(parts[1], parts[2], token);
     return renderNotFound();
   }
 
-  // ---------- settings ----------
-  const dialog = document.getElementById('settings');
-  const form = document.getElementById('settings-form');
-
-  document.getElementById('open-settings').addEventListener('click', () => {
-    form.apiKey.value = store('fdApiKey') || '';
-    dialog.showModal();
-  });
-  form.addEventListener('submit', (e) => {
-    if (e.submitter && e.submitter.value === 'cancel') return;
-    const key = form.apiKey.value.trim();
-    store('fdApiKey', key || null);
-    try { sessionStorage.clear(); } catch (err) { /* ignore */ }
-    route();
-  });
-
   // League nav
   document.querySelector('.league-nav').innerHTML =
     `<a href="#/" data-code="home">Dashboard</a>` +
+    `<a href="#/upcoming" data-code="upcoming">Coming matches</a>` +
     LEAGUES.map((l) => `<a href="#/league/${l.code}" data-code="${l.code}" style="--league:${l.color}"><span class="league-dot"></span>${esc(l.name)}</a>`).join('');
 
   window.addEventListener('hashchange', route);
-  try { localStorage.removeItem('dataSource'); } catch (e) { /* old setting, no longer used */ }
+  // Clean up settings stored by older versions of the site.
+  try { localStorage.removeItem('dataSource'); localStorage.removeItem('fdApiKey'); } catch (e) { /* ignore */ }
   route();
 })();

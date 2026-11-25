@@ -10,6 +10,7 @@ A simple static website showing recent results, top scorers and match details fo
 ## Features
 
 - **Dashboard**: the latest games and top 5 scorers for every league
+- **Coming matches**: all fixtures for the next 7 days across the four leagues, grouped by day, with a league filter and live games marked
 - **League pages**: recent games grouped by date and the top 15 scorers
 - **Match pages**: the score and half-time score, goal scorers under each team, venue and attendance, team statistics (possession, shots, corners, passes, tackles, cards…), a full timeline of goals with assists, cards, substitutions and missed penalties, and a **Watch recap video** button
 - All kick-off times are shown in Estonian time (`Europe/Tallinn`, 24-hour clock)
@@ -38,7 +39,7 @@ football-data.org blocks requests made directly from a browser (CORS), so the si
 
 Connect the repository with the host's default settings; no build command is needed. Purely static hosts such as GitHub Pages can't run the proxy, so the site can't load data there.
 
-**API key:** the default key is stored in `lib/football-proxy.mjs` (and `.env` for the local server). To change it, edit those files or set the `FOOTBALL_DATA_API_KEY` environment variable on the host. You can also paste a key into the site's **Settings** dialog; it's then stored in that browser only.
+**API key:** the key is stored in `lib/football-proxy.mjs` (and `.env` for the local server). To change it, edit those files or set the `FOOTBALL_DATA_API_KEY` environment variable on the host. The key is used only on the server: it's never sent to the browser, visitors can't replace it, and the proxy forwards only the few endpoints the site uses (league matches, top scorers, single match).
 
 ## Data sources
 

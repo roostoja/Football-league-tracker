@@ -12,9 +12,6 @@
   <header class="site-header">
     <div class="wrap header-inner">
       <a href="#/" class="brand"><span aria-hidden="true">⚽</span> Football Tracker</a>
-      <div class="header-actions">
-        <button id="open-settings" class="btn ghost small" type="button">Settings</button>
-      </div>
     </div>
     <nav class="wrap league-nav" aria-label="Leagues"></nav>
   </header>
@@ -27,22 +24,6 @@
     Recap links open ESPN highlights where available in your region, otherwise a YouTube search.
   </footer>
 
-  <dialog id="settings">
-    <form id="settings-form" method="dialog">
-      <h2>Settings</h2>
-      <label class="field">
-        <span>Your own API key <span class="muted small">(optional)</span></span>
-        <input name="apiKey" type="password" autocomplete="off" placeholder="Paste your football-data.org key">
-      </label>
-      <p class="muted small">The site already has a key. To use your own instead, register at
-        <a href="https://www.football-data.org/client/register" target="_blank" rel="noopener">football-data.org</a>
-        and paste it here. It's stored only in this browser; leave empty to use the site's key.</p>
-      <div class="dialog-actions">
-        <button class="btn ghost" value="cancel" formnovalidate>Cancel</button>
-        <button class="btn" value="save">Save</button>
-      </div>
-    </form>
-  </dialog>
 
   <script src="js/football-data.js"></script>
   <script src="js/espn-data.js"></script>

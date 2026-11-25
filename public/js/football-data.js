@@ -13,10 +13,6 @@
   const BASE = 'api/v4';
   const TTL_MS = 5 * 60 * 1000;
 
-  function getKey() {
-    try { return localStorage.getItem('fdApiKey') || ''; } catch (e) { return ''; }
-  }
-
   async function api(path) {
     const cacheKey = 'fd:' + path;
     try {
@@ -24,21 +20,16 @@
       if (hit && Date.now() - hit.t < TTL_MS) return hit.d;
     } catch (e) { /* storage unavailable */ }
 
-    const key = getKey();
     let res;
     try {
-      res = await fetch(BASE + path, { headers: key ? { 'X-Auth-Token': key } : {} });
+      res = await fetch(BASE + path);
     } catch (e) {
       throw new Error(location.protocol === 'file:'
         ? 'Open the site through the server (node server.js, then http://localhost:8000), not as a file.'
         : 'Network error: ' + e.message);
     }
     if (res.status === 429) throw new Error('API rate limit reached (10 requests/minute on the free tier). Wait a minute and reload.');
-    if (res.status === 403 || res.status === 400) {
-      let msg = '';
-      try { msg = (await res.json()).message || ''; } catch (e) { /* ignore */ }
-      throw new Error('API refused the request' + (msg ? ': ' + msg : '. Check your API key.'));
-    }
+    if (res.status === 403 || res.status === 400) throw new Error('The data provider refused the request. Please try again later.');
     if (res.status === 404 || !(res.headers.get('content-type') || '').includes('json')) {
       throw new Error(location.protocol === 'file:'
         ? 'Open the site through the server (node server.js, then http://localhost:8000), not as a file.'
@@ -96,6 +87,15 @@
         .map((m) => mapMatch(m, code))
         .sort((a, b) => b.utcDate.localeCompare(a.utcDate))
         .slice(0, limit);
+    },
+    async getUpcomingMatches(code, days = 7) {
+      const now = new Date();
+      const end = new Date(now.getTime() + days * 86400000);
+      const data = await api(`/competitions/${code}/matches?dateFrom=${ymd(now)}&dateTo=${ymd(end)}`);
+      return (data.matches || [])
+        .filter((m) => ['SCHEDULED', 'TIMED', 'IN_PLAY', 'PAUSED'].includes(m.status) && new Date(m.utcDate) <= end)
+        .map((m) => ({ ...mapMatch(m, code), status: ['IN_PLAY', 'PAUSED'].includes(m.status) ? 'LIVE' : 'SCHEDULED' }))
+        .sort((a, b) => a.utcDate.localeCompare(b.utcDate));
     },
     async getScorers(code, limit = 10) {
       // Always fetch the same list (top 15) so the dashboard and league page share one cached request.

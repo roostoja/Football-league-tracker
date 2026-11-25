@@ -56,9 +56,7 @@ function serveStatic(res, urlPath) {
     const url = new URL(req.url, `http://localhost:${PORT}`);
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       try {
-        const headers = {};
-        if (req.headers['x-auth-token']) headers['x-auth-token'] = req.headers['x-auth-token'];
-        const out = await handleApi(new Request(url, { method: req.method, headers }), envKey);
+        const out = await handleApi(new Request(url, { method: req.method }), envKey);
         res.writeHead(out.status, Object.fromEntries(out.headers));
         res.end(Buffer.from(await out.arrayBuffer()));
       } catch (e) {
