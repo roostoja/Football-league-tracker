@@ -2,7 +2,12 @@
   'use strict';
 
   const TZ = 'Europe/Tallinn';
-  const LEAGUES = window.DemoSource.leagues;
+  const LEAGUES = [
+    { code: 'PL', name: 'Premier League', country: 'England', color: '#5b2a86' },
+    { code: 'PD', name: 'La Liga', country: 'Spain', color: '#e2542b' },
+    { code: 'SA', name: 'Serie A', country: 'Italy', color: '#1f6fd1' },
+    { code: 'CL', name: 'UEFA Champions League', country: 'Europe', color: '#14317a' }
+  ];
   const app = document.getElementById('app');
 
   // ---------- data source selection ----------
@@ -13,14 +18,7 @@
     } catch (e) { return null; }
     return null;
   }
-  // Live data is used when chosen in Settings, or by default when server.js has a key.
-  function wantsLive() {
-    const pref = store('dataSource');
-    return pref === 'live' || (pref == null && window.LiveSource.status.serverKey);
-  }
-  function source() {
-    return wantsLive() && window.LiveSource.available() ? window.LiveSource : window.DemoSource;
-  }
+  const source = () => window.LiveSource;
 
   // ---------- helpers ----------
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -79,8 +77,7 @@
   }
 
   function errorBox(err) {
-    return `<div class="error"><strong>Couldn't load data.</strong> ${esc(err.message || err)}
-      ${source().name === 'live' ? '<br><button class="btn small" data-action="use-demo">Switch to demo data</button>' : ''}</div>`;
+    return `<div class="error"><strong>Couldn't load data.</strong> ${esc(err.message || err)}</div>`;
   }
 
   const loading = '<div class="loading" aria-busy="true"><span></span><span></span><span></span></div>';
@@ -299,27 +296,7 @@
   const dialog = document.getElementById('settings');
   const form = document.getElementById('settings-form');
 
-  function updateSourceBadge() {
-    const live = source().name === 'live';
-    const badge = document.getElementById('source-badge');
-    badge.textContent = live ? 'Live data' : 'Demo data';
-    badge.classList.toggle('live', live);
-    document.getElementById('demo-banner').hidden = live;
-    const reason = document.getElementById('banner-reason');
-    if (wantsLive() && !window.LiveSource.status.proxy) {
-      reason.innerHTML = location.protocol === 'file:'
-        ? 'Live data needs the bundled server, because football-data.org blocks direct browser requests. Run <code>node server.js</code> and open <a href="http://localhost:8000">http://localhost:8000</a>.'
-        : 'Live data needs the <code>/api</code> proxy, which this host isn\'t running. Deploy to Cloudflare Pages, Netlify or Vercel (the repo includes functions for each), or run <code>node server.js</code>.';
-    } else if (wantsLive()) {
-      reason.textContent = 'Add your football-data.org API key in Settings to see real results.';
-    } else {
-      reason.innerHTML = 'Open <em>Settings</em> and choose live data to see real results.';
-    }
-  }
-
   document.getElementById('open-settings').addEventListener('click', () => {
-    form.source.value = wantsLive() ? 'live' : 'demo';
-    document.getElementById('server-key-note').hidden = !window.LiveSource.status.serverKey;
     form.apiKey.value = store('fdApiKey') || '';
     dialog.showModal();
   });
@@ -327,17 +304,8 @@
     if (e.submitter && e.submitter.value === 'cancel') return;
     const key = form.apiKey.value.trim();
     store('fdApiKey', key || null);
-    store('dataSource', form.source.value);
-    updateSourceBadge();
+    try { sessionStorage.clear(); } catch (err) { /* ignore */ }
     route();
-  });
-
-  document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-action="use-demo"]')) {
-      store('dataSource', 'demo');
-      updateSourceBadge();
-      route();
-    }
   });
 
   // League nav
@@ -346,8 +314,6 @@
     LEAGUES.map((l) => `<a href="#/league/${l.code}" data-code="${l.code}" style="--league:${l.color}"><span class="league-dot"></span>${esc(l.name)}</a>`).join('');
 
   window.addEventListener('hashchange', route);
-  window.LiveSource.init().then(() => {
-    updateSourceBadge();
-    route();
-  });
+  try { localStorage.removeItem('dataSource'); } catch (e) { /* old setting, no longer used */ }
+  route();
 })();

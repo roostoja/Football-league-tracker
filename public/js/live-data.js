@@ -11,7 +11,6 @@
   'use strict';
 
   const BASE = 'api/v4';
-  const status = { proxy: false, serverKey: false };
   const TTL_MS = 5 * 60 * 1000;
 
   function getKey() {
@@ -26,12 +25,24 @@
     } catch (e) { /* storage unavailable */ }
 
     const key = getKey();
-    const res = await fetch(BASE + path, { headers: key ? { 'X-Auth-Token': key } : {} });
+    let res;
+    try {
+      res = await fetch(BASE + path, { headers: key ? { 'X-Auth-Token': key } : {} });
+    } catch (e) {
+      throw new Error(location.protocol === 'file:'
+        ? 'Open the site through the server (node server.js, then http://localhost:8000), not as a file.'
+        : 'Network error: ' + e.message);
+    }
     if (res.status === 429) throw new Error('API rate limit reached (10 requests/minute on the free tier). Wait a minute and reload.');
     if (res.status === 403 || res.status === 400) {
       let msg = '';
       try { msg = (await res.json()).message || ''; } catch (e) { /* ignore */ }
       throw new Error('API refused the request' + (msg ? ': ' + msg : '. Check your API key.'));
+    }
+    if (res.status === 404 || !(res.headers.get('content-type') || '').includes('json')) {
+      throw new Error(location.protocol === 'file:'
+        ? 'Open the site through the server (node server.js, then http://localhost:8000), not as a file.'
+        : 'The /api data proxy is not running on this host. See the README for supported hosts.');
     }
     if (!res.ok) throw new Error('API error ' + res.status);
     const data = await res.json();
@@ -77,17 +88,6 @@
 
   window.LiveSource = {
     name: 'live',
-    status,
-    // Detects whether the page is served by server.js (and whether it holds a key).
-    async init() {
-      if (!/^https?:$/.test(location.protocol)) return status;
-      try {
-        const res = await fetch('api/status', { cache: 'no-store' });
-        if (res.ok) Object.assign(status, await res.json());
-      } catch (e) { /* static hosting without the proxy */ }
-      return status;
-    },
-    available: () => status.proxy && (status.serverKey || !!getKey()),
     async getRecentMatches(code, limit = 10) {
       const now = new Date();
       const from = new Date(now.getTime() - 40 * 86400000);

@@ -36,14 +36,13 @@ football-data.org blocks requests made directly from a browser (CORS), so the si
 | Netlify | `netlify/functions/api.mjs` | `netlify.toml` (publishes `public/`) |
 | Vercel | `api/[...path].mjs` | `vercel.json` (publishes `public/`) |
 
-Connect the repository with the host's default settings; no build command is needed. Purely static hosts such as GitHub Pages can't run the proxy, so they show demo data only.
+Connect the repository with the host's default settings; no build command is needed. Purely static hosts such as GitHub Pages can't run the proxy, so the site can't load data there.
 
 **API key:** the default key is stored in `lib/football-proxy.mjs` (and `.env` for the local server). To change it, edit those files or set the `FOOTBALL_DATA_API_KEY` environment variable on the host. You can also paste a key into the site's **Settings** dialog; it's then stored in that browser only.
 
-## Data sources
+## Data source
 
-- **Live data** (football-data.org): used automatically when the server has a key.
-- **Demo data**: generated, fictional results. Used when the `/api` proxy isn't available (for example when opening `public/index.html` directly). You can also switch to it in **Settings**.
+All data comes from [football-data.org](https://www.football-data.org) through the `/api` proxy. Opening `public/index.html` directly as a file doesn't work; use `node server.js` or a supported host.
 
 Free-tier notes:
 - All four competitions are included.
@@ -56,7 +55,6 @@ Free-tier notes:
 public/                    the website (the only folder that gets published)
   index.html               page shell, navigation, settings dialog
   css/styles.css           styles (light/dark)
-  js/demo-data.js          deterministic demo data generator
   js/live-data.js          football-data.org client (calls /api)
   js/app.js                router and views (dashboard, league, match)
 lib/football-proxy.mjs     shared /api proxy with 5-minute caching

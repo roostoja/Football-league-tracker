@@ -54,8 +54,6 @@ h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color:
 .header-inner { display: flex; align-items: center; justify-content: space-between; height: 56px; gap: 12px; }
 .brand { font-weight: 700; font-size: 1.1rem; text-decoration: none; white-space: nowrap; }
 .header-actions { display: flex; align-items: center; gap: 8px; }
-.badge { font-size: .75rem; padding: 3px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); white-space: nowrap; }
-.badge.live { color: var(--accent); border-color: var(--accent); }
 .league-nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
 .league-nav::-webkit-scrollbar { display: none; }
 .league-nav a {
@@ -67,12 +65,6 @@ h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color:
 .league-nav a.active { color: var(--text); border-bottom-color: var(--league, var(--accent)); }
 .league-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--league, var(--accent)); display: inline-block; flex: none; }
 
-.banner {
-  margin-top: 16px; padding: 10px 14px; border-radius: var(--radius);
-  background: color-mix(in srgb, var(--yellow) 16%, var(--surface)); border: 1px solid color-mix(in srgb, var(--yellow) 45%, var(--border));
-  font-size: .9rem;
-}
-#demo-banner[hidden] { display: none; }
 
 main { padding-top: 20px; padding-bottom: 32px; min-height: 60vh; }
 .page-head { margin-bottom: 18px; }
@@ -214,7 +206,6 @@ main { padding-top: 20px; padding-bottom: 32px; min-height: 60vh; }
 dialog { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 20px; width: min(440px, calc(100vw - 32px)); }
 dialog::backdrop { background: rgba(0, 0, 0, .45); }
 dialog h2 { margin-bottom: 12px; }
-.radio { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
 .field { display: grid; gap: 4px; margin-top: 14px; font-weight: 500; }
 .field input { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
