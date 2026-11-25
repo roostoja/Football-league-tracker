@@ -31,7 +31,8 @@ football-data.org blocks requests made directly from a browser (CORS), so the si
 
 | Host | Proxy | Config |
 | --- | --- | --- |
-| Cloudflare Pages | `functions/api/[[path]].js` | `wrangler.toml` (publishes `public/`) |
+| Cloudflare Workers (deploy command `npx wrangler deploy`) | `worker.js` | `wrangler.toml` (assets from `public/`) |
+| Cloudflare Pages (no `wrangler.toml` needed) | `functions/api/[[path]].js` | set the output directory to `public` |
 | Netlify | `netlify/functions/api.mjs` | `netlify.toml` (publishes `public/`) |
 | Vercel | `api/[...path].mjs` | `vercel.json` (publishes `public/`) |
 
@@ -60,5 +61,5 @@ public/                    the website (the only folder that gets published)
   js/app.js                router and views (dashboard, league, match)
 lib/football-proxy.mjs     shared /api proxy with 5-minute caching
 server.js                  local Node server
-functions/, netlify/, api/ proxy entry points for Cloudflare, Netlify, Vercel
+worker.js, functions/, netlify/, api/  proxy entry points for Cloudflare, Netlify, Vercel
 ```

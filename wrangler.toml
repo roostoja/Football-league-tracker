@@ -1,4 +1,9 @@
-# Cloudflare Pages: publish only the public/ folder; functions/ provides /api/*.
+# Cloudflare Workers: `npx wrangler deploy` publishes public/ as static assets
+# and runs worker.js for /api/* (the football-data.org proxy).
 name = "football-league-tracker"
-pages_build_output_dir = "public"
+main = "worker.js"
 compatibility_date = "2024-11-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
