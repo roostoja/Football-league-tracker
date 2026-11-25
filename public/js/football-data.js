@@ -35,6 +35,7 @@
         ? 'Open the site through the server (node server.js, then http://localhost:8000), not as a file.'
         : 'The /api data proxy is not running on this host. See the README for supported hosts.');
     }
+    if (res.status === 503 && !navigator.onLine) throw new Error("You're offline and this data hasn't been saved on this device yet.");
     if (!res.ok) throw new Error('API error ' + res.status);
     const data = await res.json();
     try { sessionStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), d: data })); } catch (e) { /* ignore */ }

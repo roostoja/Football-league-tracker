@@ -52,6 +52,16 @@ h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color:
 /* ---------- header ---------- */
 .site-header { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
 .header-inner { display: flex; align-items: center; justify-content: space-between; height: 56px; gap: 12px; }
+.offline-bar {
+  background: var(--text); color: var(--surface); text-align: center; font-size: .88rem; font-weight: 500; padding: 8px 16px;
+}
+.offline-bar[hidden], #install-btn[hidden] { display: none; }
+#install-btn { flex: none; }
+/* Installed app: respect the phone's notch / status bar */
+@media (display-mode: standalone) {
+  .site-header { padding-top: env(safe-area-inset-top); }
+  body { padding-bottom: env(safe-area-inset-bottom); }
+}
 .brand { font-weight: 700; font-size: 1.1rem; text-decoration: none; white-space: nowrap; }
 .league-nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
 .league-nav::-webkit-scrollbar { display: none; }

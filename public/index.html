@@ -2,19 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Football Tracker</title>
   <meta name="description" content="Recent results, top scorers and match statistics for La Liga, Premier League, Serie A and the UEFA Champions League.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0f8a5f" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#171b21" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Football">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <header class="site-header">
     <div class="wrap header-inner">
       <a href="#/" class="brand"><span aria-hidden="true">⚽</span> Football Tracker</a>
+      <button id="install-btn" class="btn small" type="button" hidden>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 1 1 1.4-1.4l3.3 3.3V4a1 1 0 0 1 1-1zM5 19h14a1 1 0 1 1 0 2H5a1 1 0 1 1 0-2z"/></svg>
+        Install app
+      </button>
     </div>
     <nav class="wrap league-nav" aria-label="Leagues"></nav>
   </header>
+
+  <div id="offline-bar" class="offline-bar" role="status" hidden>You're offline. Showing data saved on this device.</div>
 
   <main id="app" class="wrap"></main>
 

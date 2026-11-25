@@ -392,6 +392,41 @@
     `<a href="#/upcoming" data-code="upcoming">Coming matches</a>` +
     LEAGUES.map((l) => `<a href="#/league/${l.code}" data-code="${l.code}" style="--league:${l.color}"><span class="league-dot"></span>${esc(l.name)}</a>`).join('');
 
+  // ---------- Progressive Web App ----------
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service worker registration failed:', e));
+    });
+  }
+
+  // "Install app" button (Chrome, Edge, Android). Safari users use Share › Add to Home Screen.
+  const installBtn = document.getElementById('install-btn');
+  let installPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installPrompt = e;
+    installBtn.hidden = false;
+  });
+  installBtn.addEventListener('click', async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice.catch(() => null);
+    installPrompt = null;
+    installBtn.hidden = true;
+  });
+  window.addEventListener('appinstalled', () => { installBtn.hidden = true; });
+
+  // Offline notice; reload data when the connection comes back.
+  const offlineBar = document.getElementById('offline-bar');
+  const updateOnline = () => { offlineBar.hidden = navigator.onLine; };
+  window.addEventListener('offline', updateOnline);
+  window.addEventListener('online', () => {
+    updateOnline();
+    try { sessionStorage.clear(); } catch (e) { /* ignore */ }
+    route();
+  });
+  updateOnline();
+
   window.addEventListener('hashchange', route);
   // Clean up settings stored by older versions of the site.
   try { localStorage.removeItem('dataSource'); localStorage.removeItem('fdApiKey'); } catch (e) { /* ignore */ }

@@ -15,6 +15,14 @@ A simple static website showing recent results, top scorers and match details fo
 - **Match pages**: the score and half-time score, goal scorers under each team, venue and attendance, team statistics (possession, shots, corners, passes, tackles, cards…), a full timeline of goals with assists, cards, substitutions and missed penalties, and a **Watch recap video** button
 - All kick-off times are shown in Estonian time (`Europe/Tallinn`, 24-hour clock)
 - Works on phones, and has a dark mode
+- **Installable app (PWA)**: add it to your phone's home screen or install it on desktop. It opens in its own window and works offline with the data you last viewed
+
+### Installing the app
+
+- **Android / Chrome / Edge:** tap **Install app** in the header, or use the browser menu › *Install app* / *Add to Home screen*.
+- **iPhone / iPad (Safari):** tap **Share** › **Add to Home Screen**.
+
+The service worker (`public/sw.js`) loads app files and data from the network first, so updates appear right away. It falls back to the saved copy when offline. Bump `VERSION` in `sw.js` if you add or rename app files.
 
 ## Running locally
 
@@ -59,7 +67,10 @@ football-data.org free-tier notes:
 
 ```
 public/                    the website (the only folder that gets published)
-  index.html               page shell, navigation, settings dialog
+  index.html               page shell and navigation
+  manifest.webmanifest     PWA manifest (name, icons, colours, shortcuts)
+  sw.js                    service worker (offline support)
+  icons/                   app icons (SVG source + PNGs)
   css/styles.css           styles (light/dark)
   js/espn-data.js          ESPN client: results and match details
   js/football-data.js      football-data.org client: top scorers, backup results
