@@ -19,18 +19,13 @@ A simple static website showing recent results, top scorers and match details fo
 
 Requires [Node.js](https://nodejs.org) 18 or newer. There are no dependencies and no build step.
 
-1. Get a free API key from [football-data.org](https://www.football-data.org/client/register).
-2. Create a file called `.env` in the project folder. It's git-ignored, so the key never gets committed:
+The API key is already included in `.env`, so just start the server and open http://localhost:8000:
 
-   ```
-   FOOTBALL_DATA_API_KEY=your-key-here
-   ```
+```bash
+node server.js
+```
 
-3. Start the server and open http://localhost:8000:
-
-   ```bash
-   node server.js
-   ```
+To use a different key, edit `FOOTBALL_DATA_API_KEY` in `.env` (free keys: [football-data.org](https://www.football-data.org/client/register)).
 
 The server serves the site and forwards `/api/*` requests to football-data.org, adding your key. It's needed because football-data.org blocks requests made directly from a browser (CORS), so a plain static page can't call the API.
 
