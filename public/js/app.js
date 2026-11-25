@@ -307,7 +307,9 @@
     document.getElementById('demo-banner').hidden = live;
     const reason = document.getElementById('banner-reason');
     if (wantsLive() && !window.LiveSource.status.proxy) {
-      reason.innerHTML = 'Live data needs the bundled server, because football-data.org blocks direct browser requests. Run <code>node server.js</code> and open <a href="http://localhost:8000">http://localhost:8000</a>.';
+      reason.innerHTML = location.protocol === 'file:'
+        ? 'Live data needs the bundled server, because football-data.org blocks direct browser requests. Run <code>node server.js</code> and open <a href="http://localhost:8000">http://localhost:8000</a>.'
+        : 'Live data needs the <code>/api</code> proxy, which this host isn\'t running. Deploy to Cloudflare Pages, Netlify or Vercel (the repo includes functions for each), or run <code>node server.js</code>.';
     } else if (wantsLive()) {
       reason.textContent = 'Add your football-data.org API key in Settings to see real results.';
     } else {

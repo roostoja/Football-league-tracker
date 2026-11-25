@@ -15,26 +15,34 @@ A simple static website showing recent results, top scorers and match details fo
 - All kick-off times are shown in Estonian time (`Europe/Tallinn`, 24-hour clock)
 - Works on phones, and has a dark mode
 
-## Running
+## Running locally
 
 Requires [Node.js](https://nodejs.org) 18 or newer. There are no dependencies and no build step.
-
-The API key is already included in `.env`, so just start the server and open http://localhost:8000:
 
 ```bash
 node server.js
 ```
 
-To use a different key, edit `FOOTBALL_DATA_API_KEY` in `.env` (free keys: [football-data.org](https://www.football-data.org/client/register)).
+Then open http://localhost:8000. The API key is already included, so live data works straight away.
 
-The server serves the site and forwards `/api/*` requests to football-data.org, adding your key. It's needed because football-data.org blocks requests made directly from a browser (CORS), so a plain static page can't call the API.
+## Deploying
 
-You can also skip `.env` and paste the key into the site's **Settings** dialog. It's then stored in your browser only.
+football-data.org blocks requests made directly from a browser (CORS), so the site needs a small `/api` proxy that adds the key. The repo includes ready-made functions for these hosts, all sharing `lib/football-proxy.mjs`:
+
+| Host | Proxy | Config |
+| --- | --- | --- |
+| Cloudflare Pages | `functions/api/[[path]].js` | `wrangler.toml` (publishes `public/`) |
+| Netlify | `netlify/functions/api.mjs` | `netlify.toml` (publishes `public/`) |
+| Vercel | `api/[...path].mjs` | `vercel.json` (publishes `public/`) |
+
+Connect the repository with the host's default settings; no build command is needed. Purely static hosts such as GitHub Pages can't run the proxy, so they show demo data only.
+
+**API key:** the default key is stored in `lib/football-proxy.mjs` (and `.env` for the local server). To change it, edit those files or set the `FOOTBALL_DATA_API_KEY` environment variable on the host. You can also paste a key into the site's **Settings** dialog; it's then stored in that browser only.
 
 ## Data sources
 
 - **Live data** (football-data.org): used automatically when the server has a key.
-- **Demo data**: generated, fictional results. Used when there's no key, or when you open `index.html` directly without the server. You can also switch to it in **Settings**.
+- **Demo data**: generated, fictional results. Used when the `/api` proxy isn't available (for example when opening `public/index.html` directly). You can also switch to it in **Settings**.
 
 Free-tier notes:
 - All four competitions are included.
@@ -44,10 +52,13 @@ Free-tier notes:
 ## Structure
 
 ```
-index.html          page shell, navigation, settings dialog
-css/styles.css      styles (light/dark)
-js/demo-data.js     deterministic demo data generator
-js/live-data.js     football-data.org v4 client
-js/app.js           router and views (dashboard, league, match)
-server.js           static server + football-data.org proxy
+public/                    the website (the only folder that gets published)
+  index.html               page shell, navigation, settings dialog
+  css/styles.css           styles (light/dark)
+  js/demo-data.js          deterministic demo data generator
+  js/live-data.js          football-data.org client (calls /api)
+  js/app.js                router and views (dashboard, league, match)
+lib/football-proxy.mjs     shared /api proxy with 5-minute caching
+server.js                  local Node server
+functions/, netlify/, api/ proxy entry points for Cloudflare, Netlify, Vercel
 ```
